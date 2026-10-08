@@ -1,8 +1,27 @@
 # 🎤 VocalVault – Singer Practice Tracker
 
-A clean, simple, and elegant web application designed to help vocalists and singers organize their song repertoire and track their daily vocal practice sessions.
+A simple, clean, and elegant web application designed to help vocalists and singers organize their song repertoire and track their daily vocal practice.
 
-Built with **Python Flask**, **Supabase PostgreSQL**, **bcrypt**, **HTML/CSS/JS**, and **Chart.js**.
+**Built with pure HTML, CSS, JavaScript, Supabase PostgreSQL, bcrypt, and Chart.js.**  
+**Ready to run directly on GitHub Pages!**
+
+---
+
+## 🌐 Live on GitHub Pages (How to Run in 2 Clicks)
+
+You can run this application directly on GitHub without installing anything!
+
+1. Open your repository on GitHub:  
+   👉 **[https://github.com/xrithick/VocalVault](https://github.com/xrithick/VocalVault)**
+2. Click **Settings** (tab at the top right of your repository).
+3. In the left sidebar, click **Pages**.
+4. Under **Build and deployment**:
+   - **Source**: `Deploy from a branch`
+   - **Branch**: Select `main`
+   - **Folder**: Select `/ (root)`
+5. Click **Save**.
+6. Wait 30–60 seconds, and your live website will be accessible at:  
+   👉 **`https://xrithick.github.io/VocalVault/`**
 
 ---
 
@@ -14,15 +33,7 @@ Built with **Python Flask**, **Supabase PostgreSQL**, **bcrypt**, **HTML/CSS/JS*
 - **Insightful Dashboard**: Quick cards showing total songs, total sessions, cumulative practice minutes, and average rating.
 - **Progress & Analytics**: Weekly practice activity visualized with a Chart.js bar graph, alongside your most-practiced song.
 - **Modern Dark UI**: Clean purple & blue accents, responsive layout, and zero clutter.
-
----
-
-## 🛠️ Technology Stack
-
-- **Backend**: Python 3, Flask
-- **Security**: bcrypt
-- **Database**: Supabase (PostgreSQL)
-- **Frontend**: HTML5, Modern CSS3, Vanilla JavaScript, Chart.js
+- **Cloud & Offline Ready**: Connects directly to **Supabase PostgreSQL** in the cloud, with an instant local demo mode if keys aren't added yet.
 
 ---
 
@@ -31,38 +42,27 @@ Built with **Python Flask**, **Supabase PostgreSQL**, **bcrypt**, **HTML/CSS/JS*
 ```text
 VocalVault/
 │
-├── app.py                  # Main Flask application with all routes & Supabase logic
-├── requirements.txt        # Python dependencies
-├── schema.sql              # Supabase PostgreSQL schema (3 tables: users, songs, practice)
-├── .env.example            # Environment variables template
-├── .env                    # Local environment variables (kept private / gitignored)
-├── .gitignore              # Git ignore rules (protects credentials)
-├── README.md               # Documentation and setup instructions
+├── index.html              # Main HTML application (served by GitHub Pages)
+├── style.css               # Modern dark theme with purple/blue accents
+├── app.js                  # Complete client-side application logic & bcrypt
+├── config.js               # Optional Supabase credentials config
+├── schema.sql              # Supabase PostgreSQL schema (3 tables)
+├── README.md               # Documentation and GitHub Pages guide
 │
-├── templates/              # Jinja2 HTML Templates
-│   ├── base.html           # Core layout with navigation and alerts
-│   ├── index.html          # Landing / Home page
-│   ├── register.html       # Account registration
-│   ├── login.html          # Account login
-│   ├── dashboard.html      # Overview statistics and recent activity
-│   ├── songs.html          # My Songs repertoire & song management
-│   ├── practice.html       # Practice log and session history
-│   └── progress.html       # Analytics & weekly practice chart
-│
-└── static/                 # Static assets
-    ├── style.css           # Custom dark theme with purple/blue accents
-    └── script.js           # Client-side modal handling & alert timers
+├── app.py                  # Optional Python Flask backend (if running locally)
+├── requirements.txt        # Python dependencies (for Flask mode)
+└── run.bat                 # 1-click Windows launcher (for Flask mode)
 ```
 
 ---
 
-## 🗄️ Database Setup (Supabase)
+## 🗄️ Database Setup (Supabase PostgreSQL)
 
-VocalVault uses **3 simple PostgreSQL tables**: `users`, `songs`, and `practice`.
+VocalVault uses **3 simple tables**: `users`, `songs`, and `practice`.
 
-1. Go to [Supabase](https://supabase.com) and create a free project.
-2. In the left navigation, click **SQL Editor**.
-3. Click **New Query**, open the [`schema.sql`](schema.sql) file from this repository, paste its contents into the editor:
+1. Go to **[Supabase](https://supabase.com)** and create a free project.
+2. In the left navigation, click **SQL Editor** → **New Query**.
+3. Copy and run the script from [`schema.sql`](schema.sql):
    ```sql
    -- 1. Create Users Table
    CREATE TABLE IF NOT EXISTS users (
@@ -100,77 +100,21 @@ VocalVault uses **3 simple PostgreSQL tables**: `users`, `songs`, and `practice`
    ALTER TABLE IF EXISTS songs DISABLE ROW LEVEL SECURITY;
    ALTER TABLE IF EXISTS practice DISABLE ROW LEVEL SECURITY;
    ```
-4. Click **Run**. The three tables are now created and ready!
-5. In your Supabase project dashboard, navigate to **Project Settings** → **API**.
-6. Copy your **Project URL** and your **anon (public)** key or **service_role** key.
+4. Click **Run**.
+5. In Supabase, go to **Project Settings** → **API** and copy:
+   - **Project URL** (e.g. `https://xyz.supabase.co`)
+   - **anon (public)** key
+6. Open your live VocalVault app, click **⚙️ Database** in the top navigation, paste your URL and Key, and click **Save & Connect**!
 
 ---
 
-## 🚀 Running the App Locally
+## 💻 Running Locally
 
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
+### Option A: Open directly in your browser
+Simply double-click `index.html` to open it in Chrome, Edge, or Firefox!
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-Open `.env` and fill in your Supabase credentials:
-```env
-SECRET_KEY=any-random-secret-key-for-flask
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_KEY=your-supabase-api-key-here
-```
-
-### 3. Start the Flask App
-```bash
-python app.py
-```
-Open your browser and navigate to:
-```text
-http://127.0.0.1:5000
-```
-
----
-
-## 📤 How to Upload to GitHub
-
-Follow these steps to upload this project to your GitHub account:
-
-### 1. Create a New Repository on GitHub
-1. Go to [github.com/new](https://github.com/new).
-2. Enter repository name: `VocalVault`.
-3. Choose **Public** or **Private**.
-4. Do **not** initialize with a README or .gitignore (we already have them).
-5. Click **Create repository**.
-
-### 2. Push Your Local Code to GitHub
-Open your terminal in the `VocalVault` project folder and run:
-
-```bash
-# Initialize git (if not already done)
-git init
-
-# Stage all files
-git add .
-
-# Create initial commit
-git commit -m "Initial commit: VocalVault singer practice tracker"
-
-# Rename branch to main
-git branch -M main
-
-# Link your GitHub repository (replace with your GitHub username)
-git remote add origin https://github.com/YOUR_USERNAME/VocalVault.git
-
-# Push code to GitHub
-git push -u origin main
-```
-
-*(Note: Your `.env` file containing secret keys is automatically protected by `.gitignore` and will never be pushed to GitHub.)*
+### Option B: 1-Click Flask server
+Double-click `run.bat` to launch the local Python server and open `http://127.0.0.1:5000`.
 
 ---
 

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocalVault – Singer Practice Tracker</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Libraries via CDN: Supabase, bcrypt, Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="#home" class="brand-logo">
+                <span class="brand-icon">🎤</span>
+                <span>VocalVault</span>
+            </a>
+
+            <ul class="nav-links">
+                <li class="nav-item">
+                    <a href="#home" class="nav-link">Home</a>
+                </li>
+
+                <!-- Logged In Links -->
+                <li class="nav-item nav-auth" style="display: none;">
+                    <a href="#dashboard" class="nav-link">Dashboard</a>
+                </li>
+                <li class="nav-item nav-auth" style="display: none;">
+                    <a href="#songs" class="nav-link">My Songs</a>
+                </li>
+                <li class="nav-item nav-auth" style="display: none;">
+                    <a href="#practice" class="nav-link">Practice</a>
+                </li>
+                <li class="nav-item nav-auth" style="display: none;">
+                    <a href="#progress" class="nav-link">Progress</a>
+                </li>
+
+                <!-- Database Config Button -->
+                <li class="nav-item">
+                    <a href="javascript:void(0)" class="nav-link config-link" onclick="openDbModal()">⚙️ Database</a>
+                </li>
+
+                <!-- Guest Links -->
+                <li class="nav-item nav-guest">
+                    <a href="#login" class="nav-link">Login</a>
+                </li>
+                <li class="nav-item nav-guest">
+                    <a href="#register" class="nav-link">Register</a>
+                </li>
+
+                <!-- Logout Link -->
+                <li class="nav-item nav-auth" style="display: none;">
+                    <a href="javascript:void(0)" class="nav-link logout" onclick="logoutUser()">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Views Container -->
+    <main class="main-content">
+        <div class="container">
+
+            <!-- Database Status Indicator -->
+            <div class="db-status-bar">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="db-status-pill" class="db-pill local">💻 Local Demo Mode</span>
+                    <span id="db-status-text" style="color: var(--text-muted);">
+                        Running in browser demo mode. Click "Database" to connect Supabase.
+                    </span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openDbModal()">
+                    Configure Supabase
+                </button>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- 1. HOME VIEW                                    -->
+            <!-- ============================================== -->
+            <section id="view-home" class="app-view active">
+                <div class="hero">
+                    <div class="hero-badge">🎵 Elevate Your Vocal Journey</div>
+                    <h1 class="hero-title">Master Your Voice with VocalVault</h1>
+                    <p class="hero-subtitle">
+                        A simple, clutter-free practice tracker designed specifically for singers. 
+                        Organize your repertoire, log daily practice minutes, and monitor your vocal growth over time.
+                    </p>
+
+                    <div class="hero-actions">
+                        <a href="#register" class="btn btn-primary" style="padding: 12px 28px; font-size: 1.05rem;">
+                            Get Started Free
+                        </a>
+                        <a href="#login" class="btn btn-secondary" style="padding: 12px 28px; font-size: 1.05rem;">
+                            Sign In
+                        </a>
+                    </div>
+
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon">📚</div>
+                            <h3>Curate Your Songs</h3>
+                            <p>Save all your practice songs with artist details, language, and difficulty levels (Easy, Medium, Hard).</p>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">⏱️</div>
+                            <h3>Log Daily Practice</h3>
+                            <p>Track practice minutes, rate your vocal performance (1–5 stars), and leave helpful notes for next time.</p>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">📈</div>
+                            <h3>Visualize Progress</h3>
+                            <p>Review total practice hours, average session ratings, and weekly visual charts of your dedication.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================== -->
+            <!-- 2. REGISTER VIEW                                -->
+            <!-- ============================================== -->
+            <section id="view-register" class="app-view">
+                <div class="auth-wrapper">
+                    <div class="auth-card">
+                        <div class="auth-header">
+                            <h1>Create Account</h1>
+                            <p>Join VocalVault and start tracking your singing journey</p>
+                        </div>
+
+                        <form id="form-register">
+                            <div class="form-group">
+                                <label for="reg_name" class="form-label">Full Name</label>
+                                <input type="text" id="reg_name" class="form-control" placeholder="e.g. John Singer" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="reg_email" class="form-label">Email Address</label>
+                                <input type="email" id="reg_email" class="form-control" placeholder="you@example.com" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="reg_password" class="form-label">Password</label>
+                                <input type="password" id="reg_password" class="form-control" placeholder="At least 6 characters" minlength="6" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
+                                Create Account
+                            </button>
+                        </form>
+
+                        <div class="auth-footer">
+                            Already have an account? <a href="#login">Sign In</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================== -->
+            <!-- 3. LOGIN VIEW                                   -->
+            <!-- ============================================== -->
+            <section id="view-login" class="app-view">
+                <div class="auth-wrapper">
+                    <div class="auth-card">
+                        <div class="auth-header">
+                            <h1>Sign In</h1>
+                            <p>Welcome back! Enter your details to continue</p>
+                        </div>
+
+                        <form id="form-login">
+                            <div class="form-group">
+                                <label for="log_email" class="form-label">Email Address</label>
+                                <input type="email" id="log_email" class="form-control" placeholder="you@example.com" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="log_password" class="form-label">Password</label>
+                                <input type="password" id="log_password" class="form-control" placeholder="Enter your password" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
+                                Sign In
+                            </button>
+                        </form>
+
+                        <div class="auth-footer">
+                            Don't have an account yet? <a href="#register">Create One</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================== -->
+            <!-- 4. DASHBOARD VIEW                               -->
+            <!-- ============================================== -->
+            <section id="view-dashboard" class="app-view">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">
+                            <span>👋 Welcome back, <span id="dash-welcome-name">Singer</span>!</span>
+                        </h1>
+                        <p class="page-subtitle">Here is a summary of your singing repertoire and practice progress.</p>
+                    </div>
+                    <div class="action-buttons">
+                        <a href="#songs" class="btn btn-secondary">🎵 Manage Songs</a>
+                        <a href="#practice" class="btn btn-primary">⏱️ Log Practice</a>
+                    </div>
+                </div>
+
+                <!-- 4 Stat Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🎵</div>
+                        <div class="stat-info">
+                            <h3>Total Songs</h3>
+                            <div class="stat-value" id="dash-total-songs">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon blue">🎧</div>
+                        <div class="stat-info">
+                            <h3>Practice Sessions</h3>
+                            <div class="stat-value" id="dash-total-sessions">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon green">⏱️</div>
+                        <div class="stat-info">
+                            <h3>Practice Minutes</h3>
+                            <div class="stat-value" id="dash-total-minutes">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon amber">⭐</div>
+                        <div class="stat-info">
+                            <h3>Average Rating</h3>
+                            <div class="stat-value" id="dash-avg-rating">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Card -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2 class="card-title" style="margin-bottom: 0;">Recent Practice Activity</h2>
+                        <a href="#practice" style="color: #a78bfa; font-size: 0.9rem; text-decoration: none;">View All &rarr;</a>
+                    </div>
+
+                    <div id="dash-recent-table-container" class="table-responsive" style="display: none;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Song</th>
+                                    <th>Duration</th>
+                                    <th>Rating</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-recent-table-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="dash-recent-empty" class="empty-state">
+                        <div class="empty-state-icon">🎙️</div>
+                        <h3>No practice sessions logged yet</h3>
+                        <p>Start your vocal journey by adding songs and tracking your daily practice.</p>
+                        <div style="display: flex; gap: 12px; justify-content: center;">
+                            <a href="#songs" class="btn btn-secondary btn-sm">Add Song</a>
+                            <a href="#practice" class="btn btn-primary btn-sm">Log Practice</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================== -->
+            <!-- 5. MY SONGS VIEW                                -->
+            <!-- ============================================== -->
+            <section id="view-songs" class="app-view">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title"><span>🎵 My Songs</span></h1>
+                        <p class="page-subtitle">Manage your vocal repertoire and practice selections.</p>
+                    </div>
+                </div>
+
+                <!-- Add Song Form -->
+                <div class="card">
+                    <h2 class="card-title">Add New Song</h2>
+                    <form id="add-song-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="song_name" class="form-label">Song Name *</label>
+                                <input type="text" id="song_name" class="form-control" placeholder="e.g. Perfect" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="artist" class="form-label">Artist *</label>
+                                <input type="text" id="artist" class="form-control" placeholder="e.g. Ed Sheeran" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="language" class="form-label">Language *</label>
+                                <input type="text" id="language" class="form-control" placeholder="e.g. English, Spanish, Italian" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="difficulty" class="form-label">Difficulty</label>
+                                <select id="difficulty" class="form-control">
+                                    <option value="Easy">Easy</option>
+                                    <option value="Medium" selected>Medium</option>
+                                    <option value="Hard">Hard</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                            <button type="submit" class="btn btn-primary">➕ Add Song to Vault</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Song List Table -->
+                <div class="card">
+                    <h2 class="card-title">Song Repertoire (<span id="songs-count">0</span>)</h2>
+
+                    <div id="songs-table-container" class="table-responsive" style="display: none;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Song Name</th>
+                                    <th>Artist</th>
+                                    <th>Language</th>
+                                    <th>Difficulty</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="songs-table-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="songs-empty" class="empty-state">
+                        <div class="empty-state-icon">🎼</div>
+                        <h3>No songs added yet</h3>
+                        <p>Add your first song above to begin tracking your practice sessions.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================== -->
+            <!-- 6. PRACTICE VIEW                                -->
+            <!-- ============================================== -->
+            <section id="view-practice" class="app-view">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title"><span>⏱️ Practice Log</span></h1>
+                        <p class="page-subtitle">Record your daily vocal sessions and track your progress.</p>
+                    </div>
+                </div>
+
+                <!-- If No Songs Exist Prompt -->
+                <div id="practice-no-songs" class="card" style="display: none;">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎼</div>
+                        <h3>No songs in your vault</h3>
+                        <p>You need to add at least one song to your repertoire before logging practice sessions.</p>
+                        <a href="#songs" class="btn btn-primary">Add a Song First</a>
+                    </div>
+                </div>
+
+                <!-- Practice Log Form -->
+                <div id="practice-form-card" class="card">
+                    <h2 class="card-title">Log a New Practice Session</h2>
+                    <form id="practice-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="practice_song_id" class="form-label">Song *</label>
+                                <select id="practice_song_id" class="form-control" required></select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="practice_date" class="form-label">Date *</label>
+                                <input type="date" id="practice_date" class="form-control" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="practice_minutes" class="form-label">Practice Time (Minutes) *</label>
+                                <input type="number" id="practice_minutes" class="form-control" placeholder="e.g. 30" min="1" max="600" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="practice_rating" class="form-label">Performance Rating *</label>
+                                <select id="practice_rating" class="form-control" required>
+                                    <option value="5">⭐⭐⭐⭐⭐ 5 – Excellent</option>
+                                    <option value="4" selected>⭐⭐⭐⭐ 4 – Very Good</option>
+                                    <option value="3">⭐⭐⭐ 3 – Good</option>
+                                    <option value="2">⭐⭐ 2 – Fair</option>
+                                    <option value="1">⭐ 1 – Needs Practice</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="practice_notes" class="form-label">Session Notes (Optional)</label>
+                            <textarea id="practice_notes" class="form-control" rows="2" placeholder="e.g. Focused on breath support and falsetto transitions. Need more practice on the high chorus notes."></textarea>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button type="submit" class="btn btn-primary">💾 Save Practice Session</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Practice History Table -->
+                <div class="card">
+                    <h2 class="card-title">Practice History (<span id="practice-history-count">0</span>)</h2>
+
+                    <div id="practice-history-table-container" class="table-responsive" style="display: none;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Song</th>
+                                    <th>Duration</th>
+                                    <th>Rating</th>
+                                    <th>Notes</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="practice-history-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div id="practice-history-empty" class="empty-state">
+                        <div class="empty-state-icon">🎧</div>
+                        <h3>No practice history yet</h3>
+                        <p>Log your practice sessions above to see your vocal history.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================== -->
+            <!-- 7. PROGRESS VIEW                                -->
+            <!-- ============================================== -->
+            <section id="view-progress" class="app-view">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title"><span>📈 Practice Progress</span></h1>
+                        <p class="page-subtitle">Track your vocal consistency, session statistics, and song milestones.</p>
+                    </div>
+                </div>
+
+                <!-- 4 Summary Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon green">⏱️</div>
+                        <div class="stat-info">
+                            <h3>Total Practice Time</h3>
+                            <div class="stat-value"><span id="prog-total-minutes">0</span> <span style="font-size: 1rem; color: var(--text-muted);">mins</span></div>
+                            <p id="prog-hours-est" style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">~0.0 hours</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon blue">🎧</div>
+                        <div class="stat-info">
+                            <h3>Practice Sessions</h3>
+                            <div class="stat-value" id="prog-total-sessions">0</div>
+                            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Recorded logs</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon amber">⭐</div>
+                        <div class="stat-info">
+                            <h3>Average Rating</h3>
+                            <div class="stat-value" id="prog-avg-rating">—</div>
+                            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Self-assessed quality</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-info">
+                            <h3>Most Practiced Song</h3>
+                            <div class="stat-value" id="prog-top-song-name" style="font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;">—</div>
+                            <p id="prog-top-song-sub" style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">No practice yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart.js Graph -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <h2 class="card-title" style="margin-bottom: 4px;">Weekly Practice Activity</h2>
+                            <p class="page-subtitle">Practice minutes logged over the last 7 days</p>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <canvas id="practiceProgressChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>VocalVault – Singer Practice Tracker &copy; 2026. Simple, clean, and focused.</p>
+        </div>
+    </footer>
+
+    <!-- ============================================== -->
+    <!-- MODALS                                         -->
+    <!-- ============================================== -->
+
+    <!-- Edit Song Modal -->
+    <div class="modal-overlay" id="editSongModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="font-size: 1.25rem;">Edit Song</h3>
+                <button type="button" class="modal-close">&times;</button>
+            </div>
+
+            <form id="editSongForm">
+                <input type="hidden" id="edit_song_id">
+                <div class="form-group">
+                    <label for="edit_song_name" class="form-label">Song Name *</label>
+                    <input type="text" id="edit_song_name" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_artist" class="form-label">Artist *</label>
+                    <input type="text" id="edit_artist" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_language" class="form-label">Language *</label>
+                    <input type="text" id="edit_language" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_difficulty" class="form-label">Difficulty</label>
+                    <select id="edit_difficulty" class="form-control">
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supabase Database Config Modal -->
+    <div class="modal-overlay" id="dbConfigModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="font-size: 1.25rem;">⚙️ Supabase Database Setup</h3>
+                <button type="button" class="modal-close">&times;</button>
+            </div>
+
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
+                Connect VocalVault directly to your free Supabase PostgreSQL cloud database, or run in browser mode.
+            </p>
+
+            <form id="dbConfigForm">
+                <div class="form-group">
+                    <label for="cfg_supabase_url" class="form-label">Supabase Project URL</label>
+                    <input type="text" id="cfg_supabase_url" class="form-control" placeholder="https://your-project.supabase.co">
+                </div>
+
+                <div class="form-group">
+                    <label for="cfg_supabase_key" class="form-label">Supabase Anon Public API Key</label>
+                    <input type="text" id="cfg_supabase_key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                </div>
+
+                <div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-dim);">
+                    💡 Don't have Supabase credentials yet? Leave empty to continue in instant browser demo mode!
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary modal-cancel">Close</button>
+                    <button type="submit" class="btn btn-primary">Save & Connect</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Script Files -->
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
