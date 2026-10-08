@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}VocalVault – Singer Practice Tracker{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-badge">🎵 Elevate Your Vocal Journey</div>
+    <h1 class="hero-title">Master Your Voice with VocalVault</h1>
+    <p class="hero-subtitle">
+        A simple, clutter-free practice tracker designed specifically for singers. 
+        Organize your repertoire, log daily practice minutes, and monitor your vocal growth over time.
+    </p>
+
+    <div class="hero-actions">
+        <a href="{{ url_for('register') }}" class="btn btn-primary" style="padding: 12px 28px; font-size: 1.05rem;">
+            Get Started Free
+        </a>
+        <a href="{{ url_for('login') }}" class="btn btn-secondary" style="padding: 12px 28px; font-size: 1.05rem;">
+            Sign In
+        </a>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">📚</div>
+            <h3>Curate Your Songs</h3>
+            <p>Save all your practice songs with artist details, language, and difficulty levels (Easy, Medium, Hard).</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">⏱️</div>
+            <h3>Log Daily Practice</h3>
+            <p>Track practice minutes, rate your vocal performance (1–5 stars), and leave helpful notes for next time.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">📈</div>
+            <h3>Visualize Progress</h3>
+            <p>Review total practice hours, average session ratings, and weekly visual charts of your dedication.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}My Songs – VocalVault{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span>🎵 My Songs</span>
+        </h1>
+        <p class="page-subtitle">Manage your vocal repertoire and practice selections.</p>
+    </div>
+</div>
+
+<!-- Add Song Form Card -->
+<div class="card">
+    <h2 class="card-title">Add New Song</h2>
+    <form method="POST" action="{{ url_for('songs') }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="song_name" class="form-label">Song Name *</label>
+                <input 
+                    type="text" 
+                    id="song_name" 
+                    name="song_name" 
+                    class="form-control" 
+                    placeholder="e.g. Perfect" 
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="artist" class="form-label">Artist *</label>
+                <input 
+                    type="text" 
+                    id="artist" 
+                    name="artist" 
+                    class="form-control" 
+                    placeholder="e.g. Ed Sheeran" 
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="language" class="form-label">Language *</label>
+                <input 
+                    type="text" 
+                    id="language" 
+                    name="language" 
+                    class="form-control" 
+                    placeholder="e.g. English, Spanish, Italian" 
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="difficulty" class="form-label">Difficulty</label>
+                <select id="difficulty" name="difficulty" class="form-control">
+                    <option value="Easy">Easy</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="Hard">Hard</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+            <button type="submit" class="btn btn-primary">
+                ➕ Add Song to Vault
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Song List Card -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 class="card-title" style="margin-bottom: 0;">Song Repertoire ({{ songs|length }})</h2>
+    </div>
+
+    {% if songs and songs|length > 0 %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Song Name</th>
+                        <th>Artist</th>
+                        <th>Language</th>
+                        <th>Difficulty</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for song in songs %}
+                        <tr>
+                            <td>
+                                <strong style="font-size: 1.05rem; color: #ffffff;">{{ song.song_name }}</strong>
+                            </td>
+                            <td>{{ song.artist }}</td>
+                            <td>
+                                <span style="color: var(--text-muted); font-size: 0.9rem;">{{ song.language }}</span>
+                            </td>
+                            <td>
+                                {% if song.difficulty == 'Easy' %}
+                                    <span class="badge badge-easy">Easy</span>
+                                {% elif song.difficulty == 'Hard' %}
+                                    <span class="badge badge-hard">Hard</span>
+                                {% else %}
+                                    <span class="badge badge-medium">Medium</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <!-- Practice Button -->
+                                    <a href="{{ url_for('practice', song_id=song.id) }}" class="btn btn-primary btn-sm" title="Practice this song">
+                                        ⏱️ Practice
+                                    </a>
+
+                                    <!-- Edit Button -->
+                                    <button 
+                                        type="button" 
+                                        class="btn btn-secondary btn-sm btn-edit-song"
+                                        data-id="{{ song.id }}"
+                                        data-name="{{ song.song_name }}"
+                                        data-artist="{{ song.artist }}"
+                                        data-language="{{ song.language }}"
+                                        data-difficulty="{{ song.difficulty }}"
+                                        title="Edit song details"
+                                    >
+                                        ✏️ Edit
+                                    </button>
+
+                                    <!-- Delete Button Form -->
+                                    <form method="POST" action="{{ url_for('delete_song', song_id=song.id) }}" onsubmit="return confirm('Are you sure you want to delete this song?');" style="display: inline;">
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Delete song">
+                                            🗑️
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🎼</div>
+            <h3>No songs added yet</h3>
+            <p>Add your first song above to begin tracking your practice sessions.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Edit Song Modal -->
+<div class="modal-overlay" id="editSongModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="font-size: 1.25rem;">Edit Song</h3>
+            <button type="button" class="modal-close">&times;</button>
+        </div>
+
+        <form id="editSongForm" method="POST" action="">
+            <div class="form-group">
+                <label for="edit_song_name" class="form-label">Song Name *</label>
+                <input type="text" id="edit_song_name" name="song_name" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="edit_artist" class="form-label">Artist *</label>
+                <input type="text" id="edit_artist" name="artist" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="edit_language" class="form-label">Language *</label>
+                <input type="text" id="edit_language" name="language" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="edit_difficulty" class="form-label">Difficulty</label>
+                <select id="edit_difficulty" name="difficulty" class="form-control">
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary modal-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

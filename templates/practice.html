@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Practice – VocalVault{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span>⏱️ Practice Log</span>
+        </h1>
+        <p class="page-subtitle">Record your daily vocal sessions and track your progress.</p>
+    </div>
+</div>
+
+{% if not songs or songs|length == 0 %}
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-state-icon">🎼</div>
+            <h3>No songs in your vault</h3>
+            <p>You need to add at least one song to your repertoire before logging practice sessions.</p>
+            <a href="{{ url_for('songs') }}" class="btn btn-primary">Add a Song First</a>
+        </div>
+    </div>
+{% else %}
+    <!-- Log Practice Form -->
+    <div class="card">
+        <h2 class="card-title">Log a New Practice Session</h2>
+        <form method="POST" action="{{ url_for('practice') }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="song_id" class="form-label">Song *</label>
+                    <select id="song_id" name="song_id" class="form-control" required>
+                        <option value="" disabled {% if not selected_song_id %}selected{% endif %}>Select a song...</option>
+                        {% for song in songs %}
+                            <option value="{{ song.id }}" {% if selected_song_id == song.id %}selected{% endif %}>
+                                {{ song.song_name }} — {{ song.artist }} ({{ song.difficulty }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="date" class="form-label">Date *</label>
+                    <input 
+                        type="date" 
+                        id="date" 
+                        name="date" 
+                        class="form-control" 
+                        value="{{ today_date }}" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="minutes" class="form-label">Practice Time (Minutes) *</label>
+                    <input 
+                        type="number" 
+                        id="minutes" 
+                        name="minutes" 
+                        class="form-control" 
+                        placeholder="e.g. 30" 
+                        min="1" 
+                        max="600" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="rating" class="form-label">Performance Rating *</label>
+                    <select id="rating" name="rating" class="form-control" required>
+                        <option value="5">⭐⭐⭐⭐⭐ 5 – Excellent</option>
+                        <option value="4" selected>⭐⭐⭐⭐ 4 – Very Good</option>
+                        <option value="3">⭐⭐⭐ 3 – Good</option>
+                        <option value="2">⭐⭐ 2 – Fair</option>
+                        <option value="1">⭐ 1 – Needs Practice</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="notes" class="form-label">Session Notes (Optional)</label>
+                <textarea 
+                    id="notes" 
+                    name="notes" 
+                    class="form-control" 
+                    rows="2" 
+                    placeholder="e.g. Focused on breath support and falsetto transitions. Need more practice on the high chorus notes."
+                ></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn btn-primary">
+                    💾 Save Practice Session
+                </button>
+            </div>
+        </form>
+    </div>
+{% endif %}
+
+<!-- Practice History Table -->
+<div class="card">
+    <h2 class="card-title">Practice History ({{ practice_history|length }})</h2>
+
+    {% if practice_history and practice_history|length > 0 %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Song</th>
+                        <th>Duration</th>
+                        <th>Rating</th>
+                        <th>Notes</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in practice_history %}
+                        <tr>
+                            <td style="color: var(--text-muted); white-space: nowrap;">{{ p.date }}</td>
+                            <td>
+                                <strong>{{ p.song_name }}</strong>
+                                <span style="color: var(--text-muted); font-size: 0.85rem; display: block;">{{ p.artist }}</span>
+                            </td>
+                            <td style="white-space: nowrap;">{{ p.minutes }} mins</td>
+                            <td style="white-space: nowrap;">
+                                <span class="star-rating">
+                                    {% for _ in range(p.rating) %}★{% endfor %}
+                                    {% for _ in range(5 - p.rating) %}<span style="color: #4b5563;">★</span>{% endfor %}
+                                </span>
+                            </td>
+                            <td style="color: var(--text-muted); max-width: 320px;">
+                                {{ p.notes if p.notes else "—" }}
+                            </td>
+                            <td style="text-align: right;">
+                                <form method="POST" action="{{ url_for('delete_practice', practice_id=p.id) }}" onsubmit="return confirm('Delete this practice log?');" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Delete log">
+                                        🗑️
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🎧</div>
+            <h3>No practice history yet</h3>
+            <p>Log your practice sessions above to see your vocal history.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

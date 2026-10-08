@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard – VocalVault{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <span>👋 Welcome back, {{ current_user_name }}!</span>
+        </h1>
+        <p class="page-subtitle">Here is a summary of your singing repertoire and practice progress.</p>
+    </div>
+    <div class="action-buttons">
+        <a href="{{ url_for('songs') }}" class="btn btn-secondary">
+            🎵 Manage Songs
+        </a>
+        <a href="{{ url_for('practice') }}" class="btn btn-primary">
+            ⏱️ Log Practice
+        </a>
+    </div>
+</div>
+
+<!-- 4 Stat Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">🎵</div>
+        <div class="stat-info">
+            <h3>Total Songs</h3>
+            <div class="stat-value">{{ total_songs }}</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon blue">🎧</div>
+        <div class="stat-info">
+            <h3>Practice Sessions</h3>
+            <div class="stat-value">{{ total_sessions }}</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon green">⏱️</div>
+        <div class="stat-info">
+            <h3>Practice Minutes</h3>
+            <div class="stat-value">{{ total_minutes }}</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon amber">⭐</div>
+        <div class="stat-info">
+            <h3>Average Rating</h3>
+            <div class="stat-value">
+                {% if total_sessions > 0 %}
+                    {{ avg_rating }} <span style="font-size: 1.1rem; color: #fbbf24;">/ 5</span>
+                {% else %}
+                    —
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Practice Sessions -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 class="card-title" style="margin-bottom: 0;">Recent Practice Activity</h2>
+        <a href="{{ url_for('practice') }}" style="color: #a78bfa; font-size: 0.9rem; text-decoration: none;">View All &rarr;</a>
+    </div>
+
+    {% if recent_practices and recent_practices|length > 0 %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Song</th>
+                        <th>Duration</th>
+                        <th>Rating</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in recent_practices %}
+                        <tr>
+                            <td style="color: var(--text-muted);">{{ p.date }}</td>
+                            <td>
+                                <strong>{{ p.song_name }}</strong>
+                                <span style="color: var(--text-muted); font-size: 0.85rem; display: block;">{{ p.artist }}</span>
+                            </td>
+                            <td>{{ p.minutes }} mins</td>
+                            <td>
+                                <span class="star-rating">
+                                    {% for _ in range(p.rating) %}★{% endfor %}
+                                    {% for _ in range(5 - p.rating) %}<span style="color: #4b5563;">★</span>{% endfor %}
+                                </span>
+                            </td>
+                            <td style="max-width: 250px; color: var(--text-muted);">
+                                {{ p.notes if p.notes else "—" }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🎙️</div>
+            <h3>No practice sessions logged yet</h3>
+            <p>Start your vocal journey by adding songs and tracking your daily practice.</p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <a href="{{ url_for('songs') }}" class="btn btn-secondary btn-sm">Add Song</a>
+                <a href="{{ url_for('practice') }}" class="btn btn-primary btn-sm">Log Practice</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Register – VocalVault{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>Create Account</h1>
+            <p>Join VocalVault and start tracking your singing journey</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label for="name" class="form-label">Full Name</label>
+                <input 
+                    type="text" 
+                    id="name" 
+                    name="name" 
+                    class="form-control" 
+                    placeholder="e.g. John Singer" 
+                    required 
+                    autofocus
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label">Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    class="form-control" 
+                    placeholder="you@example.com" 
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    class="form-control" 
+                    placeholder="At least 6 characters" 
+                    minlength="6" 
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
+                Create Account
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? <a href="{{ url_for('login') }}">Sign In</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
