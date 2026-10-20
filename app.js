@@ -1,24 +1,19 @@
 // ========================================================
-// VocalVault – Client-Side Application Logic
-// Pure HTML, CSS, JavaScript (Runs natively on GitHub Pages)
+// VocalVault – Pure HTML, CSS, JavaScript Application
+// Directly connected to Supabase PostgreSQL Database
 // ========================================================
 
-// State management
 let currentUser = null;
 let supabaseClient = null;
 let currentPracticeChart = null;
 
-// Local fallback store keys
 const STORAGE_KEYS = {
-    SESSION: 'vocalvault_session',
-    USERS: 'vocalvault_users',
-    SONGS: 'vocalvault_songs',
-    PRACTICE: 'vocalvault_practice',
-    CONFIG: 'vocalvault_config'
+    SESSION: 'vocalvault_user_session',
+    CONFIG: 'vocalvault_supabase_config'
 };
 
 // --------------------------------------------------------
-// 1. Toast Alerts
+// 1. Toast Notification Helper
 // --------------------------------------------------------
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
@@ -31,285 +26,287 @@ function showToast(message, type = 'info') {
 
     setTimeout(() => {
         toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
+        setTimeout(() => toast.remove(), 400);
+    }, 4500);
 }
 
 // --------------------------------------------------------
-// 2. Database Layer (Supabase + LocalStorage Fallback)
+// 2. Supabase Connection Manager
 // --------------------------------------------------------
 const db = {
-    init() {
-        // Retrieve credentials from localStorage or config.js
-        const savedConfig = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG) || '{}');
-        const url = (savedConfig.url || (typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.url : '')).trim();
-        const key = (savedConfig.key || (typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.key : '')).trim();
+    getSavedConfig() {
+        // First check localStorage for credentials entered in the UI
+        let saved = {};
+        try {
+            saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG) || '{}');
+        } catch (e) {
+            saved = {};
+        }
 
-        if (url && key && !url.includes('your-supabase-project-url') && url.startsWith('http')) {
+        // If not in localStorage, check config.js
+        const fileUrl = (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.url) ? SUPABASE_CONFIG.url : '';
+        const fileKey = (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.key) ? SUPABASE_CONFIG.key : '';
+
+        const url = (saved.url && saved.url.trim() && !saved.url.includes('your-project-id')) ? saved.url.trim() : fileUrl.trim();
+        const key = (saved.key && saved.key.trim() && !saved.key.includes('your-key-here')) ? saved.key.trim() : fileKey.trim();
+
+        return { url, key };
+    },
+
+    async init() {
+        const { url, key } = this.getSavedConfig();
+
+        if (url && key && url.startsWith('http') && !url.includes('your-project-id') && !key.includes('your-key-here')) {
             try {
                 if (window.supabase && window.supabase.createClient) {
                     supabaseClient = window.supabase.createClient(url, key);
-                    console.log('✅ Supabase client initialized:', url);
+                    
+                    // Verify connection by testing query on 'users' table
+                    const { error } = await supabaseClient.from('users').select('id').limit(1);
+                    if (error) {
+                        console.error('Supabase query test error:', error);
+                        this.updateStatus(false, `Supabase Error: ${error.message}. Did you run schema.sql in Supabase SQL editor?`);
+                        return false;
+                    }
+
+                    this.updateStatus(true, 'Connected to Supabase PostgreSQL cloud database.');
+                    return true;
+                } else {
+                    this.updateStatus(false, 'Supabase JS library is loading or blocked by your browser.');
+                    return false;
                 }
             } catch (err) {
-                console.error('Supabase initialization failed:', err);
-                supabaseClient = null;
+                console.error('Supabase init exception:', err);
+                this.updateStatus(false, `Connection failed: ${err.message}`);
+                return false;
             }
         } else {
             supabaseClient = null;
+            this.updateStatus(false, 'Supabase database is NOT connected. Click "Connect Supabase" to set up.');
+            return false;
         }
-
-        this.updateDbStatusBanner();
     },
 
-    isSupabaseReady() {
+    isReady() {
         return supabaseClient !== null;
     },
 
-    updateDbStatusBanner() {
+    updateStatus(connected, message) {
         const pill = document.getElementById('db-status-pill');
         const text = document.getElementById('db-status-text');
-        if (!pill || !text) return;
+        const alertBanner = document.getElementById('db-warning-banner');
 
-        if (this.isSupabaseReady()) {
-            pill.className = 'db-pill supabase';
-            pill.innerHTML = '⚡ Supabase PostgreSQL';
-            text.textContent = 'Connected directly to your Supabase cloud database.';
-        } else {
-            pill.className = 'db-pill local';
-            pill.innerHTML = '💻 Local Demo Mode';
-            text.textContent = 'Running in browser demo mode. Click "Database Settings" to connect Supabase.';
+        if (pill) {
+            pill.className = `db-pill ${connected ? 'supabase' : 'disconnected'}`;
+            pill.innerHTML = connected ? '⚡ Supabase Connected' : '⚠️ Supabase Disconnected';
+        }
+        if (text) {
+            text.textContent = message;
+        }
+        if (alertBanner) {
+            alertBanner.style.display = connected ? 'none' : 'flex';
         }
     },
 
-    // Users
-    async findUserByEmail(email) {
-        email = email.toLowerCase().trim();
-        if (this.isSupabaseReady()) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('email', email)
-                    .limit(1);
-                if (error) throw error;
-                return data && data.length > 0 ? data[0] : null;
-            } catch (err) {
-                console.warn('Supabase fetch user error, falling back to local:', err.message);
-            }
+    requireConnection() {
+        if (!this.isReady()) {
+            openDbModal();
+            showToast('Please connect your Supabase database first before continuing.', 'warning');
+            return false;
         }
-        const localUsers = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-        return localUsers.find(u => u.email === email) || null;
-    },
-
-    async registerUser(name, email, passwordHash) {
-        email = email.toLowerCase().trim();
-        const newUser = {
-            id: Date.now(),
-            name,
-            email,
-            password_hash: passwordHash,
-            created_at: new Date().toISOString()
-        };
-
-        if (this.isSupabaseReady()) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .insert([{ name, email, password_hash: passwordHash }])
-                    .select();
-                if (error) throw error;
-                if (data && data[0]) return data[0];
-            } catch (err) {
-                console.warn('Supabase register error:', err.message);
-                throw err;
-            }
-        }
-
-        // Save locally
-        const localUsers = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-        localUsers.push(newUser);
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(localUsers));
-        return newUser;
-    },
-
-    // Songs
-    async getSongs(userId) {
-        if (this.isSupabaseReady()) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('songs')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .order('id', { ascending: false });
-                if (error) throw error;
-                return data || [];
-            } catch (err) {
-                console.warn('Supabase getSongs error:', err.message);
-            }
-        }
-        const localSongs = JSON.parse(localStorage.getItem(STORAGE_KEYS.SONGS) || '[]');
-        return localSongs.filter(s => s.user_id === userId);
-    },
-
-    async addSong(userId, song) {
-        const newSong = {
-            user_id: userId,
-            song_name: song.name,
-            artist: song.artist,
-            language: song.language,
-            difficulty: song.difficulty
-        };
-
-        if (this.isSupabaseReady()) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('songs')
-                    .insert([newSong])
-                    .select();
-                if (error) throw error;
-                return data && data[0] ? data[0] : newSong;
-            } catch (err) {
-                console.error('Supabase addSong error:', err.message);
-                throw err;
-            }
-        }
-
-        const localSongs = JSON.parse(localStorage.getItem(STORAGE_KEYS.SONGS) || '[]');
-        newSong.id = Date.now();
-        localSongs.unshift(newSong);
-        localStorage.setItem(STORAGE_KEYS.SONGS, JSON.stringify(localSongs));
-        return newSong;
-    },
-
-    async updateSong(userId, songId, updatedData) {
-        if (this.isSupabaseReady()) {
-            try {
-                const { error } = await supabaseClient
-                    .from('songs')
-                    .update({
-                        song_name: updatedData.name,
-                        artist: updatedData.artist,
-                        language: updatedData.language,
-                        difficulty: updatedData.difficulty
-                    })
-                    .eq('id', songId)
-                    .eq('user_id', userId);
-                if (error) throw error;
-                return true;
-            } catch (err) {
-                console.error('Supabase updateSong error:', err.message);
-                throw err;
-            }
-        }
-
-        const localSongs = JSON.parse(localStorage.getItem(STORAGE_KEYS.SONGS) || '[]');
-        const idx = localSongs.findIndex(s => s.id == songId && s.user_id == userId);
-        if (idx !== -1) {
-            localSongs[idx].song_name = updatedData.name;
-            localSongs[idx].artist = updatedData.artist;
-            localSongs[idx].language = updatedData.language;
-            localSongs[idx].difficulty = updatedData.difficulty;
-            localStorage.setItem(STORAGE_KEYS.SONGS, JSON.stringify(localSongs));
-            return true;
-        }
-        return false;
-    },
-
-    async deleteSong(userId, songId) {
-        if (this.isSupabaseReady()) {
-            try {
-                // Delete related practice records first
-                await supabaseClient.from('practice').delete().eq('song_id', songId).eq('user_id', userId);
-                const { error } = await supabaseClient.from('songs').delete().eq('id', songId).eq('user_id', userId);
-                if (error) throw error;
-                return true;
-            } catch (err) {
-                console.error('Supabase deleteSong error:', err.message);
-                throw err;
-            }
-        }
-
-        let localSongs = JSON.parse(localStorage.getItem(STORAGE_KEYS.SONGS) || '[]');
-        localSongs = localSongs.filter(s => !(s.id == songId && s.user_id == userId));
-        localStorage.setItem(STORAGE_KEYS.SONGS, JSON.stringify(localSongs));
-
-        let localPractice = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRACTICE) || '[]');
-        localPractice = localPractice.filter(p => !(p.song_id == songId && p.user_id == userId));
-        localStorage.setItem(STORAGE_KEYS.PRACTICE, JSON.stringify(localPractice));
         return true;
     },
 
-    // Practice Sessions
-    async getPractice(userId) {
-        if (this.isSupabaseReady()) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('practice')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .order('date', { ascending: false })
-                    .order('id', { ascending: false });
-                if (error) throw error;
-                return data || [];
-            } catch (err) {
-                console.warn('Supabase getPractice error:', err.message);
-            }
+    // ----------------------------------------------------
+    // User Authentication Queries
+    // ----------------------------------------------------
+    async findUserByEmail(email) {
+        if (!this.requireConnection()) return null;
+        email = email.toLowerCase().trim();
+
+        const { data, error } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .limit(1);
+
+        if (error) {
+            console.error('findUserByEmail error:', error);
+            throw new Error(`Database error: ${error.message}`);
         }
-        const localPractice = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRACTICE) || '[]');
-        return localPractice.filter(p => p.user_id === userId).sort((a, b) => (b.date > a.date ? 1 : -1));
+
+        return data && data.length > 0 ? data[0] : null;
+    },
+
+    async registerUser(name, email, passwordHash) {
+        if (!this.requireConnection()) throw new Error('Database not connected');
+        email = email.toLowerCase().trim();
+
+        const { data, error } = await supabaseClient
+            .from('users')
+            .insert([{
+                name: name,
+                email: email,
+                password_hash: passwordHash
+            }])
+            .select();
+
+        if (error) {
+            console.error('registerUser error:', error);
+            throw new Error(error.message);
+        }
+
+        if (!data || data.length === 0) {
+            throw new Error('Registration failed: no record returned from Supabase.');
+        }
+
+        return data[0];
+    },
+
+    // ----------------------------------------------------
+    // Song Queries
+    // ----------------------------------------------------
+    async getSongs(userId) {
+        if (!this.isReady()) return [];
+
+        const { data, error } = await supabaseClient
+            .from('songs')
+            .select('*')
+            .eq('user_id', userId)
+            .order('id', { ascending: false });
+
+        if (error) {
+            console.error('getSongs error:', error);
+            showToast(`Error fetching songs: ${error.message}`, 'danger');
+            return [];
+        }
+
+        return data || [];
+    },
+
+    async addSong(userId, song) {
+        if (!this.requireConnection()) throw new Error('Database not connected');
+
+        const { data, error } = await supabaseClient
+            .from('songs')
+            .insert([{
+                user_id: userId,
+                song_name: song.name,
+                artist: song.artist,
+                language: song.language,
+                difficulty: song.difficulty
+            }])
+            .select();
+
+        if (error) {
+            console.error('addSong error:', error);
+            throw new Error(error.message);
+        }
+
+        return data && data[0] ? data[0] : null;
+    },
+
+    async updateSong(userId, songId, updatedData) {
+        if (!this.requireConnection()) throw new Error('Database not connected');
+
+        const { error } = await supabaseClient
+            .from('songs')
+            .update({
+                song_name: updatedData.name,
+                artist: updatedData.artist,
+                language: updatedData.language,
+                difficulty: updatedData.difficulty
+            })
+            .eq('id', songId)
+            .eq('user_id', userId);
+
+        if (error) {
+            console.error('updateSong error:', error);
+            throw new Error(error.message);
+        }
+
+        return true;
+    },
+
+    async deleteSong(userId, songId) {
+        if (!this.requireConnection()) throw new Error('Database not connected');
+
+        // Delete associated practice records first
+        await supabaseClient.from('practice').delete().eq('song_id', songId).eq('user_id', userId);
+
+        const { error } = await supabaseClient
+            .from('songs')
+            .delete()
+            .eq('id', songId)
+            .eq('user_id', userId);
+
+        if (error) {
+            console.error('deleteSong error:', error);
+            throw new Error(error.message);
+        }
+
+        return true;
+    },
+
+    // ----------------------------------------------------
+    // Practice Session Queries
+    // ----------------------------------------------------
+    async getPractice(userId) {
+        if (!this.isReady()) return [];
+
+        const { data, error } = await supabaseClient
+            .from('practice')
+            .select('*')
+            .eq('user_id', userId)
+            .order('date', { ascending: false })
+            .order('id', { ascending: false });
+
+        if (error) {
+            console.error('getPractice error:', error);
+            showToast(`Error fetching practice logs: ${error.message}`, 'danger');
+            return [];
+        }
+
+        return data || [];
     },
 
     async addPractice(userId, practiceData) {
-        const record = {
-            user_id: userId,
-            song_id: parseInt(practiceData.song_id),
-            date: practiceData.date,
-            minutes: parseInt(practiceData.minutes),
-            rating: parseInt(practiceData.rating),
-            notes: practiceData.notes || ''
-        };
+        if (!this.requireConnection()) throw new Error('Database not connected');
 
-        if (this.isSupabaseReady()) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('practice')
-                    .insert([record])
-                    .select();
-                if (error) throw error;
-                return data && data[0] ? data[0] : record;
-            } catch (err) {
-                console.error('Supabase addPractice error:', err.message);
-                throw err;
-            }
+        const { data, error } = await supabaseClient
+            .from('practice')
+            .insert([{
+                user_id: userId,
+                song_id: parseInt(practiceData.song_id),
+                date: practiceData.date,
+                minutes: parseInt(practiceData.minutes),
+                rating: parseInt(practiceData.rating),
+                notes: practiceData.notes || ''
+            }])
+            .select();
+
+        if (error) {
+            console.error('addPractice error:', error);
+            throw new Error(error.message);
         }
 
-        const localPractice = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRACTICE) || '[]');
-        record.id = Date.now();
-        localPractice.unshift(record);
-        localStorage.setItem(STORAGE_KEYS.PRACTICE, JSON.stringify(localPractice));
-        return record;
+        return data && data[0] ? data[0] : null;
     },
 
     async deletePractice(userId, practiceId) {
-        if (this.isSupabaseReady()) {
-            try {
-                const { error } = await supabaseClient
-                    .from('practice')
-                    .delete()
-                    .eq('id', practiceId)
-                    .eq('user_id', userId);
-                if (error) throw error;
-                return true;
-            } catch (err) {
-                console.error('Supabase deletePractice error:', err.message);
-                throw err;
-            }
+        if (!this.requireConnection()) throw new Error('Database not connected');
+
+        const { error } = await supabaseClient
+            .from('practice')
+            .delete()
+            .eq('id', practiceId)
+            .eq('user_id', userId);
+
+        if (error) {
+            console.error('deletePractice error:', error);
+            throw new Error(error.message);
         }
 
-        let localPractice = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRACTICE) || '[]');
-        localPractice = localPractice.filter(p => !(p.id == practiceId && p.user_id == userId));
-        localStorage.setItem(STORAGE_KEYS.PRACTICE, JSON.stringify(localPractice));
         return true;
     }
 };
@@ -371,7 +368,7 @@ const router = {
             if (homeView) homeView.classList.add('active');
         }
 
-        // Trigger view-specific loaders
+        // View loaders
         if (route === 'dashboard') loadDashboard();
         if (route === 'songs') loadSongs();
         if (route === 'practice') loadPractice(params.song_id);
@@ -379,7 +376,6 @@ const router = {
     },
 
     updateNav() {
-        // Toggle nav items based on user session
         const authLinks = document.querySelectorAll('.nav-auth');
         const guestLinks = document.querySelectorAll('.nav-guest');
 
@@ -391,7 +387,6 @@ const router = {
             guestLinks.forEach(el => el.style.display = 'block');
         }
 
-        // Active link styling
         document.querySelectorAll('.nav-link').forEach(link => {
             const href = link.getAttribute('href');
             if (href === `#${this.currentRoute}`) {
@@ -404,11 +399,11 @@ const router = {
 };
 
 // --------------------------------------------------------
-// 4. Authentication (with bcrypt)
+// 4. Authentication (Bcrypt + Supabase)
 // --------------------------------------------------------
 async function registerUser(name, email, password) {
     if (!name || !email || !password) {
-        showToast('Please fill in all registration fields.', 'danger');
+        showToast('Please fill in all fields.', 'danger');
         return;
     }
 
@@ -417,23 +412,42 @@ async function registerUser(name, email, password) {
         return;
     }
 
+    if (!db.requireConnection()) return;
+
+    const submitBtn = document.getElementById('btn-submit-register');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving to Supabase...';
+    }
+
     try {
+        // 1. Check if user already exists in Supabase users table
         const existing = await db.findUserByEmail(email);
         if (existing) {
-            showToast('An account with this email already exists. Please log in.', 'warning');
+            showToast('An account with this email already exists in Supabase. Please sign in.', 'warning');
             router.navigate('login');
             return;
         }
 
-        // Hash password with bcrypt
+        // 2. Hash password using bcrypt
         const salt = dcodeIO.bcrypt.genSaltSync(10);
         const passwordHash = dcodeIO.bcrypt.hashSync(password, salt);
 
-        await db.registerUser(name, email, passwordHash);
-        showToast('Account created successfully! Please sign in.', 'success');
+        // 3. Save into Supabase users table
+        const newUser = await db.registerUser(name, email, passwordHash);
+
+        showToast(`Account successfully created in Supabase! Welcome, ${newUser.name}.`, 'success');
+        document.getElementById('form-register').reset();
         router.navigate('login');
+
     } catch (err) {
+        console.error('Registration failed:', err);
         showToast(`Registration failed: ${err.message}`, 'danger');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Account';
+        }
     }
 }
 
@@ -443,7 +457,16 @@ async function loginUser(email, password) {
         return;
     }
 
+    if (!db.requireConnection()) return;
+
+    const submitBtn = document.getElementById('btn-submit-login');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Verifying with Supabase...';
+    }
+
     try {
+        // Query user from Supabase
         const user = await db.findUserByEmail(email);
         if (!user) {
             showToast('Invalid email or password.', 'danger');
@@ -457,24 +480,33 @@ async function loginUser(email, password) {
             return;
         }
 
-        // Set session
+        // Store active session
         currentUser = {
             id: user.id,
             name: user.name,
             email: user.email
         };
         localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(currentUser));
+        
         showToast(`Welcome back, ${currentUser.name}!`, 'success');
+        document.getElementById('form-login').reset();
         router.navigate('dashboard');
+
     } catch (err) {
+        console.error('Login error:', err);
         showToast(`Login failed: ${err.message}`, 'danger');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign In';
+        }
     }
 }
 
 function logoutUser() {
     currentUser = null;
     localStorage.removeItem(STORAGE_KEYS.SESSION);
-    showToast('Logged out successfully.', 'info');
+    showToast('Signed out successfully.', 'info');
     router.navigate('login');
 }
 
@@ -508,7 +540,6 @@ async function loadDashboard() {
             ? `${avgRating} <span style="font-size: 1.1rem; color: #fbbf24;">/ 5</span>`
             : '—';
 
-        // Recent 5 practices
         const recentBody = document.getElementById('dash-recent-table-body');
         const emptyState = document.getElementById('dash-recent-empty');
         const tableContainer = document.getElementById('dash-recent-table-container');
@@ -526,12 +557,12 @@ async function loadDashboard() {
                     <tr>
                         <td style="color: var(--text-muted);">${p.date}</td>
                         <td>
-                            <strong>${song.song_name}</strong>
-                            <span style="color: var(--text-muted); font-size: 0.85rem; display: block;">${song.artist}</span>
+                            <strong>${escapeHtml(song.song_name)}</strong>
+                            <span style="color: var(--text-muted); font-size: 0.85rem; display: block;">${escapeHtml(song.artist)}</span>
                         </td>
                         <td>${p.minutes} mins</td>
                         <td><span class="star-rating">${stars}</span></td>
-                        <td style="color: var(--text-muted); max-width: 250px;">${p.notes || '—'}</td>
+                        <td style="color: var(--text-muted); max-width: 250px;">${escapeHtml(p.notes || '—')}</td>
                     </tr>
                 `;
             }).join('');
@@ -600,11 +631,11 @@ async function addSongHandler(e) {
 
     try {
         await db.addSong(currentUser.id, { name, artist, language, difficulty });
-        showToast(`Song "${name}" added to vault!`, 'success');
+        showToast(`Song "${name}" saved to Supabase!`, 'success');
         document.getElementById('add-song-form').reset();
         loadSongs();
     } catch (err) {
-        showToast(`Error adding song: ${err.message}`, 'danger');
+        showToast(`Error saving song: ${err.message}`, 'danger');
     }
 }
 
@@ -627,7 +658,7 @@ async function editSongHandler(e) {
 
     try {
         await db.updateSong(currentUser.id, id, { name, artist, language, difficulty });
-        showToast('Song updated successfully!', 'success');
+        showToast('Song updated successfully in Supabase!', 'success');
         document.getElementById('editSongModal').classList.remove('active');
         loadSongs();
     } catch (err) {
@@ -636,10 +667,10 @@ async function editSongHandler(e) {
 }
 
 async function deleteSongHandler(id) {
-    if (!confirm('Are you sure you want to delete this song and its practice history?')) return;
+    if (!confirm('Are you sure you want to delete this song and its practice history from Supabase?')) return;
     try {
         await db.deleteSong(currentUser.id, id);
-        showToast('Song removed from vault.', 'info');
+        showToast('Song deleted from Supabase.', 'info');
         loadSongs();
     } catch (err) {
         showToast(`Error deleting song: ${err.message}`, 'danger');
@@ -668,7 +699,6 @@ async function loadPractice(preselectedSongId) {
         const historyTable = document.getElementById('practice-history-table-container');
         const historyCount = document.getElementById('practice-history-count');
 
-        // Set default today's date
         document.getElementById('practice_date').value = new Date().toISOString().split('T')[0];
 
         if (songs.length === 0) {
@@ -686,7 +716,6 @@ async function loadPractice(preselectedSongId) {
                 `).join('');
         }
 
-        // Render practice logs
         historyCount.textContent = practices.length;
         if (practices.length === 0) {
             historyTable.style.display = 'none';
@@ -740,20 +769,20 @@ async function addPracticeHandler(e) {
 
     try {
         await db.addPractice(currentUser.id, { song_id, date, minutes, rating, notes });
-        showToast('Practice session recorded! Keep up the vocal training!', 'success');
+        showToast('Practice session saved in Supabase! Keep it up!', 'success');
         document.getElementById('practice-form').reset();
         document.getElementById('practice_date').value = new Date().toISOString().split('T')[0];
         loadPractice();
     } catch (err) {
-        showToast(`Error recording practice: ${err.message}`, 'danger');
+        showToast(`Error saving practice session: ${err.message}`, 'danger');
     }
 }
 
 async function deletePracticeHandler(id) {
-    if (!confirm('Delete this practice log?')) return;
+    if (!confirm('Delete this practice log from Supabase?')) return;
     try {
         await db.deletePractice(currentUser.id, id);
-        showToast('Practice log deleted.', 'info');
+        showToast('Practice log deleted from Supabase.', 'info');
         loadPractice();
     } catch (err) {
         showToast(`Error deleting practice log: ${err.message}`, 'danger');
@@ -761,7 +790,7 @@ async function deletePracticeHandler(id) {
 }
 
 // --------------------------------------------------------
-// 8. Progress View (Stats & Chart.js)
+// 8. Progress View (Chart.js & Analytics)
 // --------------------------------------------------------
 async function loadProgress() {
     if (!currentUser) return;
@@ -787,7 +816,7 @@ async function loadProgress() {
             ? `${avgRating} <span style="font-size: 1rem; color: #fbbf24;">/ 5</span>`
             : '—';
 
-        // Most Practiced Song
+        // Find Most Practiced Song
         const songMinutesMap = {};
         const songSessionsMap = {};
 
@@ -816,7 +845,6 @@ async function loadProgress() {
             topSongSub.textContent = 'No practice logs yet';
         }
 
-        // Render Chart.js
         renderWeeklyChart(practices);
 
     } catch (err) {
@@ -828,7 +856,6 @@ function renderWeeklyChart(practices) {
     const ctx = document.getElementById('practiceProgressChart');
     if (!ctx) return;
 
-    // Generate last 7 days labels & values
     const today = new Date();
     const dateLabels = [];
     const dateKeys = [];
@@ -888,7 +915,7 @@ function renderWeeklyChart(practices) {
                     borderWidth: 1,
                     padding: 12,
                     callbacks: {
-                        label: (ctx) => `${ctx.parsed.y} minutes`
+                        label: (c) => `${c.parsed.y} minutes`
                     }
                 }
             },
@@ -911,12 +938,12 @@ function renderWeeklyChart(practices) {
 }
 
 // --------------------------------------------------------
-// 9. Database Settings Modal
+// 9. Supabase Connection Modal
 // --------------------------------------------------------
 function openDbModal() {
-    const savedConfig = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG) || '{}');
-    document.getElementById('cfg_supabase_url').value = savedConfig.url || (typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.url : '');
-    document.getElementById('cfg_supabase_key').value = savedConfig.key || (typeof SUPABASE_CONFIG !== 'undefined' ? SUPABASE_CONFIG.key : '');
+    const { url, key } = db.getSavedConfig();
+    document.getElementById('cfg_supabase_url').value = url;
+    document.getElementById('cfg_supabase_key').value = key;
     document.getElementById('dbConfigModal').classList.add('active');
 }
 
@@ -925,16 +952,38 @@ async function saveDbConfig(e) {
     const url = document.getElementById('cfg_supabase_url').value.trim();
     const key = document.getElementById('cfg_supabase_key').value.trim();
 
-    localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify({ url, key }));
-    db.init();
-
-    if (db.isSupabaseReady()) {
-        showToast('Connected to Supabase successfully!', 'success');
-    } else {
-        showToast('Saved. Enter valid Supabase credentials to activate cloud sync.', 'info');
+    if (!url || !key) {
+        showToast('Please enter both Project URL and Anon Key.', 'danger');
+        return;
     }
 
-    document.getElementById('dbConfigModal').classList.remove('active');
+    if (!url.startsWith('http')) {
+        showToast('Project URL must start with https://', 'danger');
+        return;
+    }
+
+    const saveBtn = document.getElementById('btn-save-db');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Testing Connection...';
+    }
+
+    localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify({ url, key }));
+    const success = await db.init();
+
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Connect & Test';
+    }
+
+    if (success) {
+        showToast('Connected to Supabase PostgreSQL database successfully!', 'success');
+        document.getElementById('dbConfigModal').classList.remove('active');
+        // Reload current view
+        router.renderView(router.currentRoute);
+    } else {
+        showToast('Connection failed! Check your credentials and verify schema.sql was run in Supabase.', 'danger');
+    }
 }
 
 // --------------------------------------------------------
@@ -957,8 +1006,8 @@ function escapeAttr(str) {
 // --------------------------------------------------------
 // 10. Initialization
 // --------------------------------------------------------
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Restore Session
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Restore User Session
     const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
     if (savedSession) {
         try {
@@ -968,13 +1017,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 2. Initialize Database
-    db.init();
+    // 2. Initialize Supabase
+    await db.init();
 
     // 3. Initialize Router
     router.init();
 
-    // 4. Attach Form Handlers
+    // 4. Form Event Listeners
     const regForm = document.getElementById('form-register');
     if (regForm) {
         regForm.addEventListener('submit', (e) => {
@@ -1010,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dbConfigForm = document.getElementById('dbConfigForm');
     if (dbConfigForm) dbConfigForm.addEventListener('submit', saveDbConfig);
 
-    // Modal Close buttons
+    // Modal Close
     document.querySelectorAll('.modal-close, .modal-cancel').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const modal = e.target.closest('.modal-overlay');

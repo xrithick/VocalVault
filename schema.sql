@@ -1,8 +1,11 @@
--- ==========================================
--- VocalVault: Supabase PostgreSQL Schema
--- ==========================================
--- Run this script in the Supabase SQL Editor
--- (Dashboard -> SQL Editor -> New Query -> Run)
+-- ========================================================
+-- VocalVault: Supabase PostgreSQL Database Schema
+-- ========================================================
+-- How to apply this in Supabase:
+-- 1. Open your project on https://supabase.com
+-- 2. Go to "SQL Editor" in the left sidebar
+-- 3. Click "New Query", paste this entire script, and click "Run"
+-- ========================================================
 
 -- 1. Create Users Table
 CREATE TABLE IF NOT EXISTS users (
@@ -36,8 +39,19 @@ CREATE TABLE IF NOT EXISTS practice (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Disable Row Level Security (RLS) for simple backend API access
--- This ensures the Flask backend can query and insert records without policy restrictions
+-- ========================================================
+-- Permissions & Security Setup
+-- ========================================================
+-- Disable Row Level Security (RLS) so the client app can directly 
+-- insert and select data using your public anon API key
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS songs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS practice DISABLE ROW LEVEL SECURITY;
+
+-- Grant permissions to anon (public) and authenticated roles
+GRANT ALL ON TABLE users TO anon, authenticated, service_role;
+GRANT ALL ON TABLE songs TO anon, authenticated, service_role;
+GRANT ALL ON TABLE practice TO anon, authenticated, service_role;
+
+-- Grant sequence permissions for auto-incrementing IDs
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;

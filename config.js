@@ -1,13 +1,20 @@
 // ========================================================
-// VocalVault – Supabase Configuration
+// VocalVault – Supabase Cloud Database Configuration
 // ========================================================
-// You can enter your Supabase credentials here, or enter
-// them directly inside the web application via "Database Settings".
+// Get these credentials from your Supabase Dashboard:
+// 1. Log into https://supabase.com and select your project.
+// 2. Click "Project Settings" (gear icon) -> "API".
+// 3. Copy "Project URL" into 'url' below.
+// 4. Copy "anon" (public) key into 'key' below.
+//
+// TIP: You can also enter these directly in the web app
+// by clicking "⚡ Connect Supabase" in the top navigation!
+// ========================================================
 
 const SUPABASE_CONFIG = {
-    // Replace with your Supabase Project URL (e.g. https://xyzcompany.supabase.co)
-    url: "your-supabase-project-url",
+    // Paste your Supabase Project URL here:
+    url: "https://your-project-id.supabase.co",
 
-    // Replace with your Supabase Anon Public Key (from Project Settings -> API)
-    key: "your-supabase-api-key"
+    // Paste your Supabase Anon Public API Key here:
+    key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-key-here"
 };

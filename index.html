@@ -43,9 +43,9 @@
                     <a href="#progress" class="nav-link">Progress</a>
                 </li>
 
-                <!-- Database Config Button -->
+                <!-- Database Connect Button -->
                 <li class="nav-item">
-                    <a href="javascript:void(0)" class="nav-link config-link" onclick="openDbModal()">⚙️ Database</a>
+                    <a href="javascript:void(0)" class="nav-link config-link" onclick="openDbModal()">⚡ Connect Supabase</a>
                 </li>
 
                 <!-- Guest Links -->
@@ -64,20 +64,36 @@
         </div>
     </nav>
 
-    <!-- Main Views Container -->
+    <!-- Main Content -->
     <main class="main-content">
         <div class="container">
+
+            <!-- Persistent Database Disconnected Warning Banner -->
+            <div id="db-warning-banner" class="db-warning-banner" style="display: none;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.4rem;">⚠️</span>
+                    <div>
+                        <strong>Supabase Database is NOT Connected!</strong>
+                        <div style="font-size: 0.85rem; color: #fecaca; margin-top: 2px;">
+                            Registration and data will fail to save until you connect your Supabase project.
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" onclick="openDbModal()">
+                    Connect Supabase Now
+                </button>
+            </div>
 
             <!-- Database Status Indicator -->
             <div class="db-status-bar">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span id="db-status-pill" class="db-pill local">💻 Local Demo Mode</span>
+                    <span id="db-status-pill" class="db-pill disconnected">⚠️ Supabase Disconnected</span>
                     <span id="db-status-text" style="color: var(--text-muted);">
-                        Running in browser demo mode. Click "Database" to connect Supabase.
+                        Checking database connection...
                     </span>
                 </div>
                 <button type="button" class="btn btn-secondary btn-sm" onclick="openDbModal()">
-                    Configure Supabase
+                    Database Settings
                 </button>
             </div>
 
@@ -106,13 +122,13 @@
                         <div class="feature-card">
                             <div class="feature-icon">📚</div>
                             <h3>Curate Your Songs</h3>
-                            <p>Save all your practice songs with artist details, language, and difficulty levels (Easy, Medium, Hard).</p>
+                            <p>Save all your practice songs in Supabase with artist details, language, and difficulty levels (Easy, Medium, Hard).</p>
                         </div>
 
                         <div class="feature-card">
                             <div class="feature-icon">⏱️</div>
                             <h3>Log Daily Practice</h3>
-                            <p>Track practice minutes, rate your vocal performance (1–5 stars), and leave helpful notes for next time.</p>
+                            <p>Track practice minutes, rate your vocal performance (1–5 stars), and leave helpful rehearsal notes.</p>
                         </div>
 
                         <div class="feature-card">
@@ -132,7 +148,7 @@
                     <div class="auth-card">
                         <div class="auth-header">
                             <h1>Create Account</h1>
-                            <p>Join VocalVault and start tracking your singing journey</p>
+                            <p>Your account will be securely saved into your Supabase database</p>
                         </div>
 
                         <form id="form-register">
@@ -149,9 +165,12 @@
                             <div class="form-group">
                                 <label for="reg_password" class="form-label">Password</label>
                                 <input type="password" id="reg_password" class="form-control" placeholder="At least 6 characters" minlength="6" required>
+                                <small style="display: block; color: var(--text-dim); margin-top: 4px; font-size: 0.8rem;">
+                                    🔒 Hashed with <strong>bcrypt</strong> before saving to Supabase.
+                                </small>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
+                            <button type="submit" id="btn-submit-register" class="btn btn-primary btn-block" style="margin-top: 10px;">
                                 Create Account
                             </button>
                         </form>
@@ -171,7 +190,7 @@
                     <div class="auth-card">
                         <div class="auth-header">
                             <h1>Sign In</h1>
-                            <p>Welcome back! Enter your details to continue</p>
+                            <p>Authenticate with your Supabase credentials</p>
                         </div>
 
                         <form id="form-login">
@@ -185,7 +204,7 @@
                                 <input type="password" id="log_password" class="form-control" placeholder="Enter your password" required>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">
+                            <button type="submit" id="btn-submit-login" class="btn btn-primary btn-block" style="margin-top: 10px;">
                                 Sign In
                             </button>
                         </form>
@@ -206,7 +225,7 @@
                         <h1 class="page-title">
                             <span>👋 Welcome back, <span id="dash-welcome-name">Singer</span>!</span>
                         </h1>
-                        <p class="page-subtitle">Here is a summary of your singing repertoire and practice progress.</p>
+                        <p class="page-subtitle">Here is a summary of your singing repertoire and practice progress from Supabase.</p>
                     </div>
                     <div class="action-buttons">
                         <a href="#songs" class="btn btn-secondary">🎵 Manage Songs</a>
@@ -290,7 +309,7 @@
                 <div class="page-header">
                     <div>
                         <h1 class="page-title"><span>🎵 My Songs</span></h1>
-                        <p class="page-subtitle">Manage your vocal repertoire and practice selections.</p>
+                        <p class="page-subtitle">Manage your vocal repertoire stored in Supabase PostgreSQL.</p>
                     </div>
                 </div>
 
@@ -325,7 +344,7 @@
                         </div>
 
                         <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-                            <button type="submit" class="btn btn-primary">➕ Add Song to Vault</button>
+                            <button type="submit" class="btn btn-primary">➕ Save Song to Supabase</button>
                         </div>
                     </form>
                 </div>
@@ -352,7 +371,7 @@
                     <div id="songs-empty" class="empty-state">
                         <div class="empty-state-icon">🎼</div>
                         <h3>No songs added yet</h3>
-                        <p>Add your first song above to begin tracking your practice sessions.</p>
+                        <p>Add your first song above to save it into Supabase.</p>
                     </div>
                 </div>
             </section>
@@ -364,7 +383,7 @@
                 <div class="page-header">
                     <div>
                         <h1 class="page-title"><span>⏱️ Practice Log</span></h1>
-                        <p class="page-subtitle">Record your daily vocal sessions and track your progress.</p>
+                        <p class="page-subtitle">Record your daily vocal sessions and track your consistency.</p>
                     </div>
                 </div>
 
@@ -476,7 +495,7 @@
                         <div class="stat-info">
                             <h3>Practice Sessions</h3>
                             <div class="stat-value" id="prog-total-sessions">0</div>
-                            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Recorded logs</p>
+                            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Recorded in Supabase</p>
                         </div>
                     </div>
 
@@ -520,7 +539,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>VocalVault – Singer Practice Tracker &copy; 2026. Simple, clean, and focused.</p>
+            <p>VocalVault – Singer Practice Tracker &copy; 2026. Powered by Supabase PostgreSQL.</p>
         </div>
     </footer>
 
@@ -574,32 +593,34 @@
     <div class="modal-overlay" id="dbConfigModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 style="font-size: 1.25rem;">⚙️ Supabase Database Setup</h3>
+                <h3 style="font-size: 1.25rem;">⚡ Connect Supabase PostgreSQL</h3>
                 <button type="button" class="modal-close">&times;</button>
             </div>
 
-            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
-                Connect VocalVault directly to your free Supabase PostgreSQL cloud database, or run in browser mode.
-            </p>
+            <div style="background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px; font-size: 0.85rem; color: #d8b4fe;">
+                <strong>Quick 2-minute Setup:</strong>
+                <ol style="padding-left: 18px; margin-top: 6px; line-height: 1.5;">
+                    <li>Open your project at <a href="https://supabase.com" target="_blank" style="color: #fff; text-decoration: underline;">supabase.com</a></li>
+                    <li>Go to <strong>SQL Editor</strong> &rarr; run the SQL script from <code>schema.sql</code>.</li>
+                    <li>Go to <strong>Project Settings &rarr; API</strong> &rarr; copy your <strong>Project URL</strong> and <strong>anon (public) key</strong>.</li>
+                    <li>Paste them below and click <strong>Connect &amp; Test</strong>.</li>
+                </ol>
+            </div>
 
             <form id="dbConfigForm">
                 <div class="form-group">
-                    <label for="cfg_supabase_url" class="form-label">Supabase Project URL</label>
-                    <input type="text" id="cfg_supabase_url" class="form-control" placeholder="https://your-project.supabase.co">
+                    <label for="cfg_supabase_url" class="form-label">Supabase Project URL *</label>
+                    <input type="text" id="cfg_supabase_url" class="form-control" placeholder="https://your-project.supabase.co" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="cfg_supabase_key" class="form-label">Supabase Anon Public API Key</label>
-                    <input type="text" id="cfg_supabase_key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                    <label for="cfg_supabase_key" class="form-label">Supabase Anon (Public) API Key *</label>
+                    <input type="text" id="cfg_supabase_key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required>
                 </div>
 
-                <div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-dim);">
-                    💡 Don't have Supabase credentials yet? Leave empty to continue in instant browser demo mode!
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
                     <button type="button" class="btn btn-secondary modal-cancel">Close</button>
-                    <button type="submit" class="btn btn-primary">Save & Connect</button>
+                    <button type="submit" id="btn-save-db" class="btn btn-primary">Connect &amp; Test</button>
                 </div>
             </form>
         </div>
